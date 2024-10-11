@@ -137,27 +137,27 @@ python
 ## Issue
 
 After activating the environment, check the python version.
-	```bash
-	python --version
-	```
+```bash
+python --version
+```
 If it's not as same as the given version:
 ### Open the `~/.zshrc` or `~/.bashrc` file.
-	```bash
-	vi ~/.zshrc
-	```
+```bash
+vi ~/.zshrc
+```
 ### Add the following lines at the end of the file if they are not already there:
 
-	```bash
-	# Add pyenv to PATH
-	export PATH="$HOME/.pyenv/bin:$PATH"
-	eval "$(pyenv init --path)"
-	eval "$(pyenv init -)"
-	eval "$(pyenv virtualenv-init -)"
-	```
+```bash
+# Add pyenv to PATH
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+```
 ### Save the file and reload the shell configuration:
 
-	```bash
-	source ~/.zshrc
-	```
+```bash
+source ~/.zshrc
+```
 ### Restart Your Terminal
 After updating your shell configuration, close and reopen your terminal. When you start a new session, pyenv should load correctly, and the environment should automatically use Python 2.7 when you activate your virtual environment.
