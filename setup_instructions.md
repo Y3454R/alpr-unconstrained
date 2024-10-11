@@ -102,7 +102,7 @@ You should see the environment name in your terminal prompt: `(alpr-env-py27)`.
 Install TensorFlow 1.5.0 for Python 2.7:
 
 ```bash
-pip install --no-cache-dir https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-1.5.0-cp27-cp27m-linux_x86_64.whl
+pip install --no-cache-dir tensorflow==1.5.0
 ```
 
 ### 3.2 Install Keras 2.2.4:
