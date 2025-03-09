@@ -1,4 +1,4 @@
-GPU=1
+GPU=0
 CUDNN=0
 OPENCV=0
 OPENMP=1
@@ -18,7 +18,7 @@ ALIB=libdarknet.a
 EXEC=darknet
 OBJDIR=./obj/
 
-CC=gcc
+CC=/opt/homebrew/bin/gcc-14
 NVCC=nvcc 
 AR=ar
 ARFLAGS=rcs
