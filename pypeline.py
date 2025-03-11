@@ -12,19 +12,34 @@ from src.utils import im2single
 from src.keras_utils import load_model, detect_lp
 from src.label import Label, Shape, writeShapes
 
-# vehicle_weights = 'data/vehicle-detector/yolo-voc.weights'
-# vehicle_netcfg  = 'data/vehicle-detector/yolo-voc.cfg'
-# vehicle_dataset = 'data/vehicle-detector/voc.data'
-
-# vehicle_net  = dn.load_net(vehicle_netcfg, vehicle_weights, 0)
-# vehicle_meta = dn.load_meta(vehicle_dataset)
-
 wpod_net_path = "data/lp-detector/wpod-net_update1.h5"
 wpod_net = load_model(wpod_net_path)
 
 
 def adjust_pts(pts, lroi):
     return pts * lroi.wh().reshape((2, 1)) + lroi.tl().reshape((2, 1))
+
+
+def lp_detection_v2(Ivehicle, lp_threshold=0.5):
+    ratio = float(max(Ivehicle.shape[:2])) / min(Ivehicle.shape[:2])
+    side = int(ratio * 288.0)
+    bound_dim = min(side + (side % (2**4)), 608)
+    Llp, LlpImgs, _ = detect_lp(
+        wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
+    )
+    # print("lp_detection_v2: ")
+    if len(LlpImgs):
+        print("Llp: ", Llp)
+        print("here LlopImgs: ", LlpImgs)
+        # Ilp = LlpImgs[0]
+        # Ilp = cv2.cvtColor(Ilp, cv2.COLOR_BGR2GRAY)
+        # Ilp = cv2.cvtColor(Ilp, cv2.COLOR_GRAY2BGR)
+
+        # s = Shape(Llp[0].pts)
+
+        # cv2.imwrite("%s/%s_lp.png" % (output_dir, bname), Ilp * 255.0)
+        # writeShapes("%s/%s_lp.txt" % (output_dir, bname), [s])
+    # pass
 
 
 def lp_detection(input_dir, lp_threshold=0.5):
@@ -82,6 +97,10 @@ def detect_vehicles(net, meta, img_path, threshold=0.5):
     return [r for r in detections if r[0].decode("utf-8") in ["car", "bus"]]
 
 
+def crop_vehicle(Iorig, x1, y1, x2, y2):
+    return Iorig[y1:y2, x1:x2]
+
+
 def process_image(img_path, detections):
     """
     Processes an image by drawing bounding boxes around detected vehicles.
@@ -96,6 +115,7 @@ def process_image(img_path, detections):
     Lcars = []
 
     for r in detections:
+        # print(f"r: {r}")
         cx, cy, w, h = (np.array(r[2]) / np.concatenate((WH, WH))).tolist()
         x1, y1 = int((cx - w / 2) * WH[0]), int((cy - h / 2) * WH[1])
         x2, y2 = int((cx + w / 2) * WH[0]), int((cy + h / 2) * WH[1])
@@ -111,6 +131,13 @@ def process_image(img_path, detections):
 
         # Store label info
         Lcars.append(Label(0, np.array([x1, y1]), np.array([x2, y2])))
+        cropped_vehicle = crop_vehicle(Iorig, x1, y1, x2, y2)
+        if cropped_vehicle is not None and cropped_vehicle.size > 0:
+            lp_detection_v2(cropped_vehicle)
+
+        # Save or pass the cropped vehicle image
+        cropped_path = f"cropped_vehicle_{x1}_{y1}.png"
+        cv2.imwrite(cropped_path, cropped_vehicle)
 
     return Iorig, Lcars  # Return processed image and bounding boxes
 
@@ -133,7 +160,7 @@ def vehicle_detection(img_path):
         if processed_img is not None:
             results.append({"image": processed_img, "labels": labels})
 
-        print("results: ", results)
+        # print("results: ", results)
 
         return results
 
