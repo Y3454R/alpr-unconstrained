@@ -3,62 +3,66 @@ import keras
 import cv2
 import traceback
 
-from src.keras_utils 			import load_model
-from glob 						import glob
-from os.path 					import splitext, basename
-from src.utils 					import im2single
-from src.keras_utils 			import load_model, detect_lp
-from src.label 					import Shape, writeShapes
+from src.keras_utils import load_model
+from glob import glob
+from os.path import splitext, basename
+from src.utils import im2single
+from src.keras_utils import load_model, detect_lp
+from src.label import Shape, writeShapes
 
 
-def adjust_pts(pts,lroi):
-	return pts*lroi.wh().reshape((2,1)) + lroi.tl().reshape((2,1))
+def adjust_pts(pts, lroi):
+    return pts * lroi.wh().reshape((2, 1)) + lroi.tl().reshape((2, 1))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-	try:
-		
-		input_dir  = sys.argv[1]
-		output_dir = input_dir
+    try:
 
-		lp_threshold = .5
+        input_dir = "/Users/adibasubah/alpr-unconstrained/dekha_jak"
+        output_dir = input_dir
 
-		wpod_net_path = sys.argv[2]
-		wpod_net = load_model(wpod_net_path)
+        lp_threshold = 0.5
 
-		imgs_paths = glob('%s/*car.png' % input_dir)
+        lp_model = "data/lp-detector/wpod-net_update1.h5"
 
-		print 'Searching for license plates using WPOD-NET'
+        wpod_net_path = lp_model
 
-		for i,img_path in enumerate(imgs_paths):
+        wpod_net = load_model(wpod_net_path)
 
-			print '\t Processing %s' % img_path
+        imgs_paths = glob("%s/*detected.png" % input_dir)
+        print("imgs_paths: ", imgs_paths)
 
-			bname = splitext(basename(img_path))[0]
-			Ivehicle = cv2.imread(img_path)
+        # print 'Searching for license plates using WPOD-NET'
 
-			ratio = float(max(Ivehicle.shape[:2]))/min(Ivehicle.shape[:2])
-			side  = int(ratio*288.)
-			bound_dim = min(side + (side%(2**4)),608)
-			print "\t\tBound dim: %d, ratio: %f" % (bound_dim,ratio)
+        for i, img_path in enumerate(imgs_paths):
 
-			Llp,LlpImgs,_ = detect_lp(wpod_net,im2single(Ivehicle),bound_dim,2**4,(240,80),lp_threshold)
+            # print '\t Processing %s' % img_path
 
-			if len(LlpImgs):
-				Ilp = LlpImgs[0]
-				Ilp = cv2.cvtColor(Ilp, cv2.COLOR_BGR2GRAY)
-				Ilp = cv2.cvtColor(Ilp, cv2.COLOR_GRAY2BGR)
+            bname = splitext(basename(img_path))[0]
+            Ivehicle = cv2.imread(img_path)
 
-				s = Shape(Llp[0].pts)
+            ratio = float(max(Ivehicle.shape[:2])) / min(Ivehicle.shape[:2])
+            side = int(ratio * 288.0)
+            bound_dim = min(side + (side % (2**4)), 608)
+            # print "\t\tBound dim: %d, ratio: %f" % (bound_dim,ratio)
 
-				cv2.imwrite('%s/%s_lp.png' % (output_dir,bname),Ilp*255.)
-				writeShapes('%s/%s_lp.txt' % (output_dir,bname),[s])
+            Llp, LlpImgs, _ = detect_lp(
+                wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
+            )
 
-	except:
-		traceback.print_exc()
-		sys.exit(1)
+            if len(LlpImgs):
+                Ilp = LlpImgs[0]
+                Ilp = cv2.cvtColor(Ilp, cv2.COLOR_BGR2GRAY)
+                Ilp = cv2.cvtColor(Ilp, cv2.COLOR_GRAY2BGR)
 
-	sys.exit(0)
+                s = Shape(Llp[0].pts)
 
+                cv2.imwrite("%s/%s_lp.png" % (output_dir, bname), Ilp * 255.0)
+                writeShapes("%s/%s_lp.txt" % (output_dir, bname), [s])
 
+    except:
+        traceback.print_exc()
+        sys.exit(1)
+
+    sys.exit(0)
