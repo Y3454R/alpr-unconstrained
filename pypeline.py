@@ -11,6 +11,7 @@ from os.path import splitext, basename
 from src.utils import im2single
 from src.keras_utils import load_model, detect_lp
 from src.label import Label, Shape, writeShapes
+from ocr_utils import ocr_process
 
 wpod_net_path = "data/lp-detector/wpod-net_update1.h5"
 wpod_net = load_model(wpod_net_path)
@@ -27,19 +28,40 @@ def lp_detection_v2(Ivehicle, lp_threshold=0.5):
     Llp, LlpImgs, _ = detect_lp(
         wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
     )
-    # print("lp_detection_v2: ")
-    if len(LlpImgs):
-        print("Llp: ", Llp)
-        print("here LlopImgs: ", LlpImgs)
-        # Ilp = LlpImgs[0]
-        # Ilp = cv2.cvtColor(Ilp, cv2.COLOR_BGR2GRAY)
-        # Ilp = cv2.cvtColor(Ilp, cv2.COLOR_GRAY2BGR)
+    for lp, lp_img in zip(Llp, LlpImgs):
+        # print(
+        #     "License Plate Metadata:", lp
+        # )  # `lp` contains metadata (bounding box, points, etc.)
+        # print(
+        #     "License Plate Image Shape:", lp_img.shape
+        # )  # `lp_img` is the cropped plate image
+        # check_lp_bbox(Ivehicle, lp, lp_img)
+        ocr_process(lp_img)
 
-        # s = Shape(Llp[0].pts)
 
-        # cv2.imwrite("%s/%s_lp.png" % (output_dir, bname), Ilp * 255.0)
-        # writeShapes("%s/%s_lp.txt" % (output_dir, bname), [s])
-    # pass
+def check_lp_bbox(Ivehicle, lp, lp_img):
+    # Check if we have exactly 2 points (top-left and bottom-right)
+    print(f"len(lp.pts): {len(lp.pts)}")
+    if len(lp.pts) == 2:
+        top_left = (
+            int(lp.pts[0][0] * Ivehicle.shape[1]),
+            int(lp.pts[0][1] * Ivehicle.shape[0]),
+        )
+        bottom_right = (
+            int(lp.pts[1][0] * Ivehicle.shape[1]),
+            int(lp.pts[1][1] * Ivehicle.shape[0]),
+        )
+    else:
+        print(f"Warning: Unexpected number of points ({len(lp.pts)})")
+        return
+
+    # Draw rectangle on the original image
+    cv2.rectangle(Ivehicle, top_left, bottom_right, (0, 255, 0), 2)  # not fitting
+
+    # Display the image
+    cv2.imshow("Detected License Plate", lp_img)
+    cv2.waitKey(5000)
+    cv2.destroyAllWindows()
 
 
 def lp_detection(input_dir, lp_threshold=0.5):
