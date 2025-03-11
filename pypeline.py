@@ -21,7 +21,7 @@ def adjust_pts(pts, lroi):
     return pts * lroi.wh().reshape((2, 1)) + lroi.tl().reshape((2, 1))
 
 
-def lp_detection_v2(Ivehicle, lp_threshold=0.5):
+def lp_detection(Ivehicle, lp_threshold=0.5):
     ratio = float(max(Ivehicle.shape[:2])) / min(Ivehicle.shape[:2])
     side = int(ratio * 288.0)
     bound_dim = min(side + (side % (2**4)), 608)
@@ -29,83 +29,32 @@ def lp_detection_v2(Ivehicle, lp_threshold=0.5):
         wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
     )
     for lp, lp_img in zip(Llp, LlpImgs):
-        # print(
-        #     "License Plate Metadata:", lp
-        # )  # `lp` contains metadata (bounding box, points, etc.)
-        # print(
-        #     "License Plate Image Shape:", lp_img.shape
-        # )  # `lp_img` is the cropped plate image
-        # check_lp_bbox(Ivehicle, lp, lp_img)
         ocr_process(lp_img)
 
 
-def check_lp_bbox(Ivehicle, lp, lp_img):
-    # Check if we have exactly 2 points (top-left and bottom-right)
-    print(f"len(lp.pts): {len(lp.pts)}")
-    if len(lp.pts) == 2:
-        top_left = (
-            int(lp.pts[0][0] * Ivehicle.shape[1]),
-            int(lp.pts[0][1] * Ivehicle.shape[0]),
-        )
-        bottom_right = (
-            int(lp.pts[1][0] * Ivehicle.shape[1]),
-            int(lp.pts[1][1] * Ivehicle.shape[0]),
-        )
-    else:
-        print(f"Warning: Unexpected number of points ({len(lp.pts)})")
-        return
+# def check_lp_bbox(Ivehicle, lp, lp_img):
+#     # Check if we have exactly 2 points (top-left and bottom-right)
+#     print(f"len(lp.pts): {len(lp.pts)}")
+#     if len(lp.pts) == 2:
+#         top_left = (
+#             int(lp.pts[0][0] * Ivehicle.shape[1]),
+#             int(lp.pts[0][1] * Ivehicle.shape[0]),
+#         )
+#         bottom_right = (
+#             int(lp.pts[1][0] * Ivehicle.shape[1]),
+#             int(lp.pts[1][1] * Ivehicle.shape[0]),
+#         )
+#     else:
+#         print(f"Warning: Unexpected number of points ({len(lp.pts)})")
+#         return
 
-    # Draw rectangle on the original image
-    cv2.rectangle(Ivehicle, top_left, bottom_right, (0, 255, 0), 2)  # not fitting
+#     # Draw rectangle on the original image
+#     cv2.rectangle(Ivehicle, top_left, bottom_right, (0, 255, 0), 2)  # not fitting
 
-    # Display the image
-    cv2.imshow("Detected License Plate", lp_img)
-    cv2.waitKey(5000)
-    cv2.destroyAllWindows()
-
-
-def lp_detection(input_dir, lp_threshold=0.5):
-
-    try:
-
-        output_dir = input_dir
-
-        imgs_paths = glob("%s/*detected.png" % input_dir)
-        # print("imgs_paths: ", imgs_paths)
-
-        for i, img_path in enumerate(imgs_paths):
-
-            # print '\t Processing %s' % img_path
-
-            bname = splitext(basename(img_path))[0]
-            Ivehicle = cv2.imread(img_path)
-
-            ratio = float(max(Ivehicle.shape[:2])) / min(Ivehicle.shape[:2])
-            side = int(ratio * 288.0)
-            bound_dim = min(side + (side % (2**4)), 608)
-            # print "\t\tBound dim: %d, ratio: %f" % (bound_dim,ratio)
-
-            Llp, LlpImgs, _ = detect_lp(
-                wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
-            )
-
-            # print("LlpImgs ", LlpImgs)
-
-            if len(LlpImgs):
-                Ilp = LlpImgs[0]
-                Ilp = cv2.cvtColor(Ilp, cv2.COLOR_BGR2GRAY)
-                Ilp = cv2.cvtColor(Ilp, cv2.COLOR_GRAY2BGR)
-
-                s = Shape(Llp[0].pts)
-
-                cv2.imwrite("%s/%s_lp.png" % (output_dir, bname), Ilp * 255.0)
-                writeShapes("%s/%s_lp.txt" % (output_dir, bname), [s])
-
-    except:
-        traceback.print_exc()
-        sys.exit(1)
-
-    sys.exit(0)
+#     # Display the image
+#     cv2.imshow("Detected License Plate", lp_img)
+#     cv2.waitKey(5000)
+#     cv2.destroyAllWindows()
 
 
 def load_yolo_model(cfg_path, weights_path, data_path):
@@ -155,7 +104,7 @@ def process_image(img_path, detections):
         Lcars.append(Label(0, np.array([x1, y1]), np.array([x2, y2])))
         cropped_vehicle = crop_vehicle(Iorig, x1, y1, x2, y2)
         if cropped_vehicle is not None and cropped_vehicle.size > 0:
-            lp_detection_v2(cropped_vehicle)
+            lp_detection(cropped_vehicle)
 
         # Save or pass the cropped vehicle image
         cropped_path = f"cropped_vehicle_{x1}_{y1}.png"
@@ -196,5 +145,3 @@ if __name__ == "__main__":
     results = vehicle_detection(
         "/Users/adibasubah/alpr-unconstrained/test_ball/test.jpg"
     )
-    lp_detection("/Users/adibasubah/alpr-unconstrained/dekha_jak")
-    # license_plates = lp_detection(results)
