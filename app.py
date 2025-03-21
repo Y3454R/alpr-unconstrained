@@ -1,43 +1,27 @@
-from flask import Flask, request, jsonify
-from pypeline import vehicle_detection
+from fastapi import FastAPI, File, UploadFile
+import aiofiles
 import os
+from pypeline import vehicle_detection  # Your existing detection logic
+import asyncio
 
-app = Flask(__name__)
+app = FastAPI()
 
-
-@app.route("/", methods=["GET"])
-def read_root():
-    return jsonify({"message": "Hello, Flask!"})
-
-
-@app.route("/alpr/detect", methods=["POST"])
-def lp_detection_route():
-    if "image" not in request.files:
-        return jsonify({"error": "Image file is required"}), 400
-
-    image_file = request.files["image"]
-
-    # Save the image (optional)
-    save_path = os.path.join("uploads", image_file.filename)
-    os.makedirs("uploads", exist_ok=True)
-    image_file.save(save_path)
-
-    # return jsonify({"message": "got your pic, bro!"})
-
-    results = vehicle_detection(save_path)
-
-    return jsonify(
-        {
-            "message": "Detection complete",
-            "vehicle_detection": results,
-        }
-    )
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-def vehicle_detection(image_path):
-    # Dummy function to simulate processing
-    return {"image_path": image_path, "vehicles_detected": 2}
+@app.post("/alpr/detect")
+async def detect_license_plate(image: UploadFile = File(...)):
+    file_path = os.path.join(UPLOAD_DIR, image.filename)
 
+    async with aiofiles.open(file_path, "wb") as out_file:
+        while content := await image.read(1024):  # Read in chunks
+            await out_file.write(content)
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, vehicle_detection, file_path)
+
+    # print(f"resres: {results}")
+
+    os.remove(file_path)  # Clean up after processing
+    return {"message": "Detection successful", "data": results}

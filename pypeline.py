@@ -28,33 +28,16 @@ def lp_detection(Ivehicle, lp_threshold=0.5):
     Llp, LlpImgs, _ = detect_lp(
         wpod_net, im2single(Ivehicle), bound_dim, 2**4, (240, 80), lp_threshold
     )
+
+    detected_lp = []
+
     for lp, lp_img in zip(Llp, LlpImgs):
-        ocr_process(lp_img)
+        lp_text = ocr_process(lp_img)
+        print("detected lp text: ", lp_text)
+        if lp_text not in detected_lp:
+            detected_lp.append(lp_text)
 
-
-# def check_lp_bbox(Ivehicle, lp, lp_img):
-#     # Check if we have exactly 2 points (top-left and bottom-right)
-#     print(f"len(lp.pts): {len(lp.pts)}")
-#     if len(lp.pts) == 2:
-#         top_left = (
-#             int(lp.pts[0][0] * Ivehicle.shape[1]),
-#             int(lp.pts[0][1] * Ivehicle.shape[0]),
-#         )
-#         bottom_right = (
-#             int(lp.pts[1][0] * Ivehicle.shape[1]),
-#             int(lp.pts[1][1] * Ivehicle.shape[0]),
-#         )
-#     else:
-#         print(f"Warning: Unexpected number of points ({len(lp.pts)})")
-#         return
-
-#     # Draw rectangle on the original image
-#     cv2.rectangle(Ivehicle, top_left, bottom_right, (0, 255, 0), 2)  # not fitting
-
-#     # Display the image
-#     cv2.imshow("Detected License Plate", lp_img)
-#     cv2.waitKey(5000)
-#     cv2.destroyAllWindows()
+    return detected_lp
 
 
 def load_yolo_model(cfg_path, weights_path, data_path):
@@ -73,17 +56,15 @@ def crop_vehicle(Iorig, x1, y1, x2, y2):
 
 
 def process_image(img_path, detections):
-    """
-    Processes an image by drawing bounding boxes around detected vehicles.
-    Instead of saving the result, returns the processed image as a NumPy array.
-    """
+
     if not detections:
         return None, []
 
     Iorig = cv2.imread(img_path)
     WH = np.array(Iorig.shape[1::-1], dtype=float)
-    # bname = basename(splitext(img_path)[0])
     Lcars = []
+
+    detected_lp = []
 
     for r in detections:
         # print(f"r: {r}")
@@ -104,13 +85,14 @@ def process_image(img_path, detections):
         Lcars.append(Label(0, np.array([x1, y1]), np.array([x2, y2])))
         cropped_vehicle = crop_vehicle(Iorig, x1, y1, x2, y2)
         if cropped_vehicle is not None and cropped_vehicle.size > 0:
-            lp_detection(cropped_vehicle)
+            lp_texts = lp_detection(cropped_vehicle)
+            detected_lp.extend(lp_texts)
 
         # Save or pass the cropped vehicle image
-        cropped_path = f"cropped_vehicle_{x1}_{y1}.png"
-        cv2.imwrite(cropped_path, cropped_vehicle)
+        # cropped_path = f"cropped_vehicle_{x1}_{y1}.png"
+        # cv2.imwrite(cropped_path, cropped_vehicle)
 
-    return Iorig, Lcars  # Return processed image and bounding boxes
+    return detected_lp, Iorig, Lcars  # Return processed image and bounding boxes
 
 
 vehicle_net, vehicle_meta = load_yolo_model(
@@ -124,16 +106,21 @@ def vehicle_detection(img_path):
     """Runs vehicle detection on all images in input_dir and returns processed images + labels."""
     try:
 
-        results = []
+        # results = []
 
         detections = detect_vehicles(vehicle_net, vehicle_meta, img_path, threshold=0.5)
-        processed_img, labels = process_image(img_path, detections)
-        if processed_img is not None:
-            results.append({"image": processed_img, "labels": labels})
+        lp_text_results, _, _ = process_image(img_path, detections)
+        # if processed_img is not None:
+        #     results.append({"image": processed_img, "labels": labels})
+
+        # print("res_check: ", lp_text_results)
+
+        return lp_text_results
+
+        # print(detected_lp)
+        # return detected_lp
 
         # print("results: ", results)
-
-        return results
 
     except Exception as e:
         print(f"Error during vehicle detection: {str(e)}")
