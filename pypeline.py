@@ -128,7 +128,7 @@ def vehicle_detection(img_path):
         return None
 
 
-if __name__ == "__main__":
-    results = vehicle_detection(
-        "/Users/adibasubah/alpr-unconstrained/test_ball/test.jpg"
-    )
+# if __name__ == "__main__":
+#     results = vehicle_detection(
+#         "/Users/adibasubah/alpr-unconstrained/test_ball/test.jpg"
+#     )
