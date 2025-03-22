@@ -1,25 +1,43 @@
 import cv2
-import pytesseract
+import numpy as np
+
+from ocr.read import run_easyocr
+
+# import pytesseract
+# from ocr.partition import image_partition
+# from ocr.preprocess import preprocess
+# from ocr.recognition import read_number_plate
 
 
 def ocr_process(cropped_lp_img):
-    # Convert the image to grayscale for better OCR accuracy
-    gray_img = cv2.cvtColor(cropped_lp_img, cv2.COLOR_BGR2GRAY)
 
-    # Ensure the image is in uint8 format (needed for Tesseract)
-    gray_img = cv2.convertScaleAbs(gray_img)
+    if cropped_lp_img is None:
+        raise ValueError("Error: The input image is None!")
 
-    cv2.imshow("grayscaled: ", gray_img)
-    cv2.waitKey(5000)
+    # # Print image properties for debugging
+    # print(f"Image Type: {type(cropped_lp_img)}")
+    # print(f"Image Shape: {cropped_lp_img.shape}")
+    # print(f"Image Data Type: {cropped_lp_img.dtype}")
+    # print(
+    #     f"Min Pixel Value: {cropped_lp_img.min()}, Max Pixel Value: {cropped_lp_img.max()}"
+    # )
 
-    # # Perform OCR (with Bangla language)
-    custom_oem_psm_config = r"--oem 3 --psm 6 -l ben"  # 'ben' is for Bangla language
-    ocr_result = pytesseract.image_to_string(gray_img, config=custom_oem_psm_config)
+    # Convert image to uint8
+    if cropped_lp_img.dtype != np.uint8:
+        if cropped_lp_img.max() <= 1.0:
+            cropped_lp_img = (cropped_lp_img * 255).astype(np.uint8)
+        else:
+            cropped_lp_img = cv2.convertScaleAbs(cropped_lp_img)
 
-    # # Display the detected text
-    print("Detected Text: ", ocr_result)
+    extracted_text = run_easyocr(cropped_lp_img)
+    # print("Extracted License Plate Text:", extracted_text)
+    return extracted_text
 
-    # Optionally, show the image
-    cv2.imshow("Detected License Plate", cropped_lp_img)
-    cv2.waitKey(5000)
-    cv2.destroyAllWindows()
+    # result = image_partition(cropped_lp_img, show_images=False)
+
+    # # Get the color partitions
+    # upper_part = result["upper_color"]
+    # lower_part = result["lower_color"]
+    # # preprocess(lower_part)
+
+    # number = read_number_plate(lower_part)
